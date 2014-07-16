@@ -395,6 +395,10 @@ sub make {
         path      => [ '.', '.' ],
     );
 
+    # replace windows style path delimiter '\' to Unix style path delimiter '/'
+    my @srcs = map { s/\\/\//g; $_; } @srcs;
+    my @headers = map { s/\\/\//g; $_; } @headers;
+
     my $rendered_find_packages = render_find_packages($tx, @headers, @srcs);
     my $rendered_source_groups = render_source_groups($tx, %filters);
 
