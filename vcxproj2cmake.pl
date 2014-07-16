@@ -22,6 +22,8 @@ my $target_conf = $ARGV[1]
 my $filters_path = $filepath . '.filters';
 
 
+our ($volume, $project_dir, $file) = File::Spec->splitpath($filepath);
+$project_dir = File::Spec->rel2abs($project_dir);
 my $vcxproj_xml  = XML::TreePP->new()->parsefile($filepath);
 my $vcxproj_filters_xml  = XML::TreePP->new()->parsefile($filters_path);
 my $target = $vcxproj_xml->{Project}->{PropertyGroup}->[0]->{RootNamespace};
@@ -298,7 +300,8 @@ sub render_find_packages {
     my @libs;
     for my $file (@srcs) {        
         # find libs that the file uses
-        open my $info, $file or die "Could not open $file: $!";
+        $file =~ s/\\/\//g;
+        open my $info, File::Spec->catpath($volume, $project_dir, $file) or die "Could not open $file: $!";
         while( my $line = <$info>)  {  
             if ($line =~ /#\s*include/) {
                 my @lib_pattern_indexes_to_delete;
