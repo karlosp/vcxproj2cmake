@@ -21,7 +21,6 @@ my $target_conf = $ARGV[1]
 
 my $filters_path = $filepath . '.filters';
 
-
 our ($volume, $project_dir, $file) = File::Spec->splitpath($filepath);
 $project_dir = File::Spec->rel2abs($project_dir);
 my $vcxproj_xml  = XML::TreePP->new()->parsefile($filepath);
@@ -50,7 +49,7 @@ sub get_filters {
     }
     
     # second itemgroup contains sorce files filter information
-    for my $clcompile (@{$itemgroups[1]->{ClCompile}}) {
+    for my $clcompile (@_{$itemgroups[1]->{ClCompile}}) {
         my $filename = $clcompile->{-Include};
         my $filter = $clcompile->{Filter};
         push @{$filters{$filter}}, $filename;
@@ -301,7 +300,7 @@ sub render_find_packages {
     for my $file (@srcs) {        
         # find libs that the file uses
         $file =~ s/\\/\//g;
-        open my $info, File::Spec->catpath($volume, $project_dir, $file) or die "Could not open $file: $!";
+		open my $info, File::Spec->catpath($volume, $project_dir, $file) or die "Could not open $file: $!";
         while( my $line = <$info>)  {  
             if ($line =~ /#\s*include/) {
                 my @lib_pattern_indexes_to_delete;
@@ -363,20 +362,25 @@ sub render_source_groups {
             print "caught error: $_\n";
         };        
     }
-    
+	$rendered_source_groups =~ s/\\/\//g;
     return Text::Xslate::Util::mark_raw($rendered_source_groups);
 }
 
 sub make {
+
     my ($filenode_ref, $item_def_ref, %filters) = @_;
 
     my @srcs    = @{$filenode_ref->{ClCompile}};
     my @headers = @{$filenode_ref->{ClInclude}};
     my $add_dir = $item_def_ref->{ClCompile}->{AdditionalIncludeDirectories};
+	
+	
+	
     $add_dir =~ s{\\}{/}g;
     my @includes =
         grep { $_ ne '%(AdditionalIncludeDirectories)' }
             split ';', $add_dir;
+			
 
     my $def = $item_def_ref->{ClCompile}->{PreprocessorDefinitions};
     # add prefix -D. example> -DSHP
@@ -398,13 +402,16 @@ sub make {
         path      => [ '.', '.' ],
     );
 
-    # replace windows style path delimiter '\' to Unix style path delimiter '/'
-    my @srcs = map { s/\\/\//g; $_; } @srcs;
-    my @headers = map { s/\\/\//g; $_; } @headers;
-
+	#Replace all \ with /
+	s/\\/\//g for @headers;
+	s/\\/\//g for @srcs;
+	s/\\/\//g for @includes;
+	
+	
     my $rendered_find_packages = render_find_packages($tx, @headers, @srcs);
     my $rendered_source_groups = render_source_groups($tx, %filters);
-
+	
+	
     my %vars = (
         type            => $target_prop->{ConfigurationType},
         charset         => $target_prop->{CharacterSet},
